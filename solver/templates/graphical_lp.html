@@ -78,7 +78,7 @@
             {{ error_message }}
         </div>
         {% endif %}
-        <form id="lp-form" method="POST" action="/solve-lp/">
+        <form id="lp-form" method="POST" action="{% url 'solver:solve_lp' %}">
             {% csrf_token %}
             <div class="mb-3">
                 <label for="mode" class="form-label">Objective</label>
@@ -151,6 +151,6 @@
             button.parentElement.remove();
         }
     </script>
-    <a href="{% url 'solver' %}" class="btn btn-secondary mt-3">Go back to Home</a>
+    <a href="{% url 'solver:home' %}" class="btn btn-secondary mt-3">Go back to Home</a>
 </body>
 </html>
