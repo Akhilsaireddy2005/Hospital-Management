@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimal Transportation Plan</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: white;
+        }
+
+        .total-cost {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-top: 20px;
+        }
+
+        .error-message {
+            color: red;
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 1.2rem;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #ff4757;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Optimal Transportation Plan</h1>
+
+        {% if solution %}
+            <div class="table-responsive">
+                <h2>Solution Matrix</h2>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Source/Destination</th>
+                        {% for col in solution.0 %}
+                            <th>Destination {{ forloop.counter }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for row in solution %}
+                        <tr>
+                            <td>Source {{ forloop.counter }}</td>
+                            {% for val in row %}
+                                <td>{{ val }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div class="total-cost">Total Cost: {{ total_cost }}</div>
+        {% else %}
+            <div class="error-message">
+                <p>No solution found. Please check your inputs.</p>
+            </div>
+        {% endif %}
+        
+        <a href="/" class="back-btn">Go Back</a>
+    </div>
+</body>
+</html>
