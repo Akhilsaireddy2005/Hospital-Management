@@ -1,0 +1,91 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}Assignment Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>Assignment Details</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Assignment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Assignment Date:</div>
+                    <div class="col-md-8">{{ assignment.assignment_date|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Expected End Date:</div>
+                    <div class="col-md-8">{{ assignment.expected_end_date|date:"M d, Y" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Status:</div>
+                    <div class="col-md-8">
+                        <span class="badge bg-{% if assignment.is_active %}success{% else %}secondary{% endif %}">
+                            {{ assignment.is_active|yesno:"Active,Inactive" }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Priority Score:</div>
+                    <div class="col-md-8">{{ assignment.priority_score }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ assignment.patient.name }}</p>
+                <p><strong>Age:</strong> {{ assignment.patient.age }}</p>
+                <p><strong>Gender:</strong> {{ assignment.patient.gender }}</p>
+                <p><strong>Priority:</strong> 
+                    <span class="badge bg-{% if assignment.patient.priority >= 4 %}danger{% elif assignment.patient.priority >= 3 %}warning{% else %}info{% endif %}">
+                        {{ assignment.patient.get_priority_display }}
+                    </span>
+                </p>
+                <p><strong>Status:</strong> {{ assignment.patient.get_status_display }}</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Doctor Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ assignment.doctor }}</p>
+                <p><strong>Specialization:</strong> {{ assignment.doctor.specialization }}</p>
+                <p><strong>Current Patients:</strong> {{ assignment.doctor.current_patients }}/{{ assignment.doctor.max_patients }}</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Bed Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Bed Number:</strong> {{ assignment.bed.bed_number }}</p>
+                <p><strong>Type:</strong> {{ assignment.bed.get_bed_type_display }}</p>
+                <p><strong>Floor:</strong> {{ assignment.bed.floor }}</p>
+                <p><strong>Ward:</strong> {{ assignment.bed.ward }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <a href="{% url 'hospital:dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,97 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}New Patient Admission{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>New Patient Admission</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Patient Name</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="age" class="form-label">Age</label>
+                            {{ form.age }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gender" class="form-label">Gender</label>
+                            {{ form.gender }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="priority" class="form-label">Priority Level</label>
+                            {{ form.priority }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="expected_stay_days" class="form-label">Expected Stay (days)</label>
+                            {{ form.expected_stay_days }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="condition" class="form-label">Medical Condition</label>
+                        {{ form.condition }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="diagnosis" class="form-label">Diagnosis</label>
+                        {{ form.diagnosis }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Required Equipment</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="monitoring" name="required_equipment" value="MON">
+                                    <label class="form-check-label" for="monitoring">Monitoring Equipment</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="diagnostic" name="required_equipment" value="DIA">
+                                    <label class="form-check-label" for="diagnostic">Diagnostic Equipment</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="therapeutic" name="required_equipment" value="THE">
+                                    <label class="form-check-label" for="therapeutic">Therapeutic Equipment</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="life_support" name="required_equipment" value="LIF">
+                                    <label class="form-check-label" for="life_support">Life Support Equipment</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        {{ form.notes }}
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">Admit Patient</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            theme: 'bootstrap-5'
+        });
+    });
+</script>
+{% endblock %} 

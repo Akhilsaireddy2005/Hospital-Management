@@ -1,0 +1,87 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}Patient List{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>Patient List</h2>
+            <div class="btn-group">
+                <a href="{% url 'hospital:patient_list' %}" class="btn btn-outline-primary {% if not request.GET.status %}active{% endif %}">All</a>
+                <a href="{% url 'hospital:patient_list' %}?status=WAI" class="btn btn-outline-primary {% if request.GET.status == 'WAI' %}active{% endif %}">Waiting</a>
+                <a href="{% url 'hospital:patient_list' %}?status=ADM" class="btn btn-outline-primary {% if request.GET.status == 'ADM' %}active{% endif %}">Admitted</a>
+                <a href="{% url 'hospital:patient_list' %}?status=TRE" class="btn btn-outline-primary {% if request.GET.status == 'TRE' %}active{% endif %}">Under Treatment</a>
+                <a href="{% url 'hospital:patient_list' %}?status=DIS" class="btn btn-outline-primary {% if request.GET.status == 'DIS' %}active{% endif %}">Discharged</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Required Equipment</th>
+                                <th>Admission Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                            <tr>
+                                <td>{{ patient.name }}</td>
+                                <td>{{ patient.age }}</td>
+                                <td>
+                                    <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                                        {{ patient.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
+                                        {{ patient.get_priority_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% for eq_type in patient.required_equipment %}
+                                        {% if eq_type == 'MON' %}
+                                            <span class="badge bg-info me-1">Monitoring</span>
+                                        {% elif eq_type == 'DIA' %}
+                                            <span class="badge bg-primary me-1">Diagnostic</span>
+                                        {% elif eq_type == 'THE' %}
+                                            <span class="badge bg-success me-1">Therapeutic</span>
+                                        {% elif eq_type == 'LIF' %}
+                                            <span class="badge bg-danger me-1">Life Support</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>{{ patient.admission_date|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {% if patient.status == 'WAI' %}
+                                    <a href="{% url 'hospital:patient_confirm' patient.pk %}" class="btn btn-sm btn-success">
+                                        Admit Patient
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No patients found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

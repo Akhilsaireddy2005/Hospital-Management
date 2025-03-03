@@ -1,0 +1,121 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}Confirm Patient Admission{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>Confirm Patient Admission</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Name:</div>
+                    <div class="col-md-8">{{ patient.name }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Age:</div>
+                    <div class="col-md-8">{{ patient.age }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Gender:</div>
+                    <div class="col-md-8">{{ patient.gender }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Priority:</div>
+                    <div class="col-md-8">
+                        <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
+                            {{ patient.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Diagnosis:</div>
+                    <div class="col-md-8">{{ patient.diagnosis }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Expected Stay:</div>
+                    <div class="col-md-8">{{ patient.expected_stay_days }} days</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Available Resources</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Available Doctors ({{ available_doctors.count }})</h6>
+                        <ul class="list-group">
+                            {% for doctor in available_doctors %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ doctor.user.get_full_name }}
+                                <span class="badge bg-primary rounded-pill">
+                                    {{ doctor.current_patients }}/{{ doctor.max_patients }}
+                                </span>
+                            </li>
+                            {% empty %}
+                            <li class="list-group-item text-danger">No doctors available</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Available Beds ({{ available_beds.count }})</h6>
+                        <ul class="list-group">
+                            {% for bed in available_beds %}
+                            <li class="list-group-item">
+                                {{ bed.bed_number }} ({{ bed.get_bed_type_display }})
+                            </li>
+                            {% empty %}
+                            <li class="list-group-item text-danger">No beds available</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Admission Actions</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            Proceed with Admission
+                        </button>
+                        <a href="{% url 'hospital:patient_list' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+                <div class="alert alert-info mt-4">
+                    <h6 class="alert-heading">Note:</h6>
+                    <p class="mb-0">
+                        The system will automatically assign the most suitable doctor and bed based on:
+                        <ul class="mb-0">
+                            <li>Patient priority</li>
+                            <li>Doctor availability</li>
+                            <li>Bed type requirements</li>
+                        </ul>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
