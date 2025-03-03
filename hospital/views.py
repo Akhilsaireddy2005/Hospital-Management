@@ -1,15 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, CreateView, UpdateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.utils import timezone
 from .models import Patient, Doctor, Bed, Equipment, Assignment
 from .forms import PatientAdmissionForm, DoctorAvailabilityForm, BedForm, DoctorCreateForm
 from .optimizer import run_optimization
 
-class DashboardView(LoginRequiredMixin, ListView):
+class DashboardView(ListView):
     model = Patient
     template_name = 'hospital/dashboard.html'
     context_object_name = 'recent_patients'
@@ -24,7 +22,7 @@ class DashboardView(LoginRequiredMixin, ListView):
         context['total_patients'] = Patient.objects.count()
         return context
 
-class PatientAdmissionView(LoginRequiredMixin, CreateView):
+class PatientAdmissionView(CreateView):
     model = Patient
     form_class = PatientAdmissionForm
     template_name = 'hospital/patient_admission.html'
@@ -39,7 +37,6 @@ class PatientAdmissionView(LoginRequiredMixin, CreateView):
             messages.success(self.request, f'{assignments_made} new assignment(s) have been made.')
         return response
 
-@login_required
 def optimize_resources(request):
     if request.method == 'POST':
         assignments_made = run_optimization()
@@ -50,7 +47,7 @@ def optimize_resources(request):
         return redirect('hospital:dashboard')
     return redirect('hospital:dashboard')
 
-class PatientListView(LoginRequiredMixin, ListView):
+class PatientListView(ListView):
     model = Patient
     template_name = 'hospital/patient_list.html'
     context_object_name = 'patients'
@@ -61,24 +58,23 @@ class PatientListView(LoginRequiredMixin, ListView):
             return Patient.objects.filter(status=status).order_by('-priority', '-admission_date')
         return Patient.objects.all().order_by('-admission_date')
 
-class DoctorUpdateView(LoginRequiredMixin, UpdateView):
+class DoctorUpdateView(UpdateView):
     model = Doctor
     form_class = DoctorAvailabilityForm
     template_name = 'hospital/doctor_update.html'
     success_url = reverse_lazy('hospital:dashboard')
 
-class BedCreateView(LoginRequiredMixin, CreateView):
+class BedCreateView(CreateView):
     model = Bed
     form_class = BedForm
     template_name = 'hospital/bed_form.html'
     success_url = reverse_lazy('hospital:dashboard')
 
-@login_required
 def assignment_detail(request, pk):
     assignment = Assignment.objects.get(pk=pk)
     return render(request, 'hospital/assignment_detail.html', {'assignment': assignment})
 
-class DoctorCreateView(LoginRequiredMixin, CreateView):
+class DoctorCreateView(CreateView):
     model = Doctor
     form_class = DoctorCreateForm
     template_name = 'hospital/doctor_form.html'
@@ -89,7 +85,7 @@ class DoctorCreateView(LoginRequiredMixin, CreateView):
         messages.success(self.request, f'Doctor {self.object.user.get_full_name()} has been added successfully.')
         return response
 
-class DoctorListView(LoginRequiredMixin, ListView):
+class DoctorListView(ListView):
     model = Doctor
     template_name = 'hospital/doctor_list.html'
     context_object_name = 'doctors'
@@ -97,7 +93,6 @@ class DoctorListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Doctor.objects.all().order_by('user__first_name', 'user__last_name')
 
-@login_required
 def patient_admission_confirm(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
     
