@@ -30,7 +30,7 @@
                                 <th>Age</th>
                                 <th>Status</th>
                                 <th>Priority</th>
-                                <th>Required Equipment</th>
+                                <th>Assigned to</th>
                                 <th>Admission Date</th>
                                 <th>Actions</th>
                             </tr>
@@ -51,17 +51,23 @@
                                     </span>
                                 </td>
                                 <td>
-                                    {% for eq_type in patient.required_equipment %}
-                                        {% if eq_type == 'MON' %}
-                                            <span class="badge bg-info me-1">Monitoring</span>
-                                        {% elif eq_type == 'DIA' %}
-                                            <span class="badge bg-primary me-1">Diagnostic</span>
-                                        {% elif eq_type == 'THE' %}
-                                            <span class="badge bg-success me-1">Therapeutic</span>
-                                        {% elif eq_type == 'LIF' %}
-                                            <span class="badge bg-danger me-1">Life Support</span>
+                                    {% if patient.assigned_doctor %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-info-light rounded-circle p-2 me-2">
+                                                <i class="fas fa-user-md text-info"></i>
+                                            </div>
+                                            <small>Dr. {{ patient.assigned_doctor.user.get_full_name }}</small>
+                                        </div>
+                                        {% if patient.assigned_bed %}
+                                            <div class="mt-1">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-bed me-1"></i>{{ patient.assigned_bed.number }}
+                                                </small>
+                                            </div>
                                         {% endif %}
-                                    {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
                                 </td>
                                 <td>{{ patient.admission_date|date:"M d, Y H:i" }}</td>
                                 <td>
@@ -69,6 +75,15 @@
                                     <a href="{% url 'hospital:patient_confirm' patient.pk %}" class="btn btn-sm btn-success">
                                         Admit Patient
                                     </a>
+                                    {% elif patient.status == 'ADM' or patient.status == 'TRE' %}
+                                    <div class="btn-group">
+                                        <a href="{% url 'hospital:patient_discharge' patient.pk %}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-sign-out-alt me-1"></i>Discharge
+                                        </a>
+                                        <a href="{% url 'hospital:patient_waiting' patient.pk %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-hourglass-half me-1"></i>Wait
+                                        </a>
+                                    </div>
                                     {% endif %}
                                 </td>
                             </tr>

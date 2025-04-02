@@ -64,7 +64,7 @@
             </div>
             <div class="card-body">
                 <p><strong>Name:</strong> {{ assignment.doctor }}</p>
-                <p><strong>Specialization:</strong> {{ assignment.doctor.specialization }}</p>
+                <p><strong>Specialization:</strong> {{ assignment.doctor.specialty }}</p>
                 <p><strong>Current Patients:</strong> {{ assignment.doctor.current_patients }}/{{ assignment.doctor.max_patients }}</p>
             </div>
         </div>
@@ -74,9 +74,7 @@
                 <h5 class="card-title mb-0">Bed Information</h5>
             </div>
             <div class="card-body">
-                <p><strong>Bed Number:</strong> {{ assignment.bed.bed_number }}</p>
-                <p><strong>Type:</strong> {{ assignment.bed.get_bed_type_display }}</p>
-                <p><strong>Floor:</strong> {{ assignment.bed.floor }}</p>
+                <p><strong>Bed Number:</strong> {{ assignment.bed.number }}</p>
                 <p><strong>Ward:</strong> {{ assignment.bed.ward }}</p>
             </div>
         </div>

@@ -23,7 +23,7 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Specialization</th>
+                                <th>Specialty</th>
                                 <th>Status</th>
                                 <th>Patients</th>
                                 <th>Actions</th>
@@ -33,30 +33,32 @@
                             {% for doctor in doctors %}
                             <tr>
                                 <td>{{ doctor.user.get_full_name }}</td>
-                                <td>{{ doctor.specialization }}</td>
+                                <td>{{ doctor.specialty }}</td>
                                 <td>
                                     <span class="badge bg-{% if doctor.is_available %}success{% else %}danger{% endif %}">
                                         {{ doctor.is_available|yesno:"Available,Not Available" }}
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="progress" style="height: 20px;">
-                                        {% with percentage=doctor.current_patients|div:doctor.max_patients|mul:100 %}
-                                        <div class="progress-bar {% if percentage > 80 %}bg-danger{% elif percentage > 60 %}bg-warning{% else %}bg-success{% endif %}"
-                                             role="progressbar"
-                                             style="width: {{ percentage }}%"
-                                             aria-valuenow="{{ doctor.current_patients }}"
-                                             aria-valuemin="0"
-                                             aria-valuemax="{{ doctor.max_patients }}">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge 
+                                            {% if doctor.current_patients == doctor.max_patients %}bg-danger
+                                            {% elif doctor.current_patients >= 2 %}bg-warning
+                                            {% else %}bg-success{% endif %} 
+                                            rounded-pill px-3 py-2">
                                             {{ doctor.current_patients }}/{{ doctor.max_patients }}
-                                        </div>
-                                        {% endwith %}
+                                        </span>
                                     </div>
                                 </td>
                                 <td>
-                                    <a href="{% url 'hospital:doctor_update' doctor.pk %}" class="btn btn-sm btn-primary">
-                                        Update Availability
-                                    </a>
+                                    <div class="btn-group">
+                                        <a href="{% url 'hospital:doctor_update' doctor.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit me-1"></i>Update
+                                        </a>
+                                        <a href="{% url 'hospital:doctor_delete' doctor.pk %}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash-alt me-1"></i>Remove
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             {% empty %}

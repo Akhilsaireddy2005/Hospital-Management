@@ -1,11 +1,11 @@
 {% extends 'hospital/base.html' %}
 
-{% block title %}Confirm Patient Admission{% endblock %}
+{% block title %}Place Patient in Waiting List{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h2>Confirm Patient Admission</h2>
+        <h2>Place Patient in Waiting List</h2>
     </div>
 </div>
 
@@ -29,6 +29,14 @@
                     <div class="col-md-8">{{ patient.gender }}</div>
                 </div>
                 <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Current Status:</div>
+                    <div class="col-md-8">
+                        <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                            {{ patient.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-3">
                     <div class="col-md-4 fw-bold">Priority:</div>
                     <div class="col-md-8">
                         <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
@@ -40,47 +48,20 @@
                     <div class="col-md-4 fw-bold">Diagnosis:</div>
                     <div class="col-md-8">{{ patient.diagnosis }}</div>
                 </div>
+                
+                {% if patient.assigned_doctor %}
                 <div class="row mb-3">
-                    <div class="col-md-4 fw-bold">Expected Stay:</div>
-                    <div class="col-md-8">{{ patient.expected_stay_days }} days</div>
+                    <div class="col-md-4 fw-bold">Assigned Doctor:</div>
+                    <div class="col-md-8">Dr. {{ patient.assigned_doctor.user.get_full_name }}</div>
                 </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Available Resources</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Available Doctors ({{ available_doctors.count }})</h6>
-                        <ul class="list-group">
-                            {% for doctor in available_doctors %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ doctor.user.get_full_name }}
-                                <span class="badge bg-primary rounded-pill">
-                                    {{ doctor.current_patients }}/{{ doctor.max_patients }}
-                                </span>
-                            </li>
-                            {% empty %}
-                            <li class="list-group-item text-danger">No doctors available</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Available Beds ({{ available_beds.count }})</h6>
-                        <ul class="list-group">
-                            {% for bed in available_beds %}
-                            <li class="list-group-item">
-                                {{ bed.number }} ({{ bed.ward }})
-                            </li>
-                            {% empty %}
-                            <li class="list-group-item text-danger">No beds available</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
+                {% endif %}
+                
+                {% if patient.assigned_bed %}
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Assigned Bed:</div>
+                    <div class="col-md-8">{{ patient.assigned_bed.number }} ({{ patient.assigned_bed.ward }})</div>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -88,14 +69,14 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Admission Actions</h5>
+                <h5 class="card-title mb-0">Waiting List Actions</h5>
             </div>
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success btn-lg">
-                            Proceed with Admission
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-hourglass-half me-2"></i>Place in Waiting List
                         </button>
                         <a href="{% url 'hospital:patient_list' %}" class="btn btn-secondary">
                             Cancel
@@ -106,11 +87,16 @@
                 <div class="alert alert-info mt-4">
                     <h6 class="alert-heading">Note:</h6>
                     <p class="mb-0">
-                        The system will automatically assign the most suitable doctor and bed based on:
+                        Placing this patient in the waiting list will:
                         <ul class="mb-0">
-                            <li>Patient priority</li>
-                            <li>Doctor availability</li>
-                            <li>Bed type requirements</li>
+                            {% if patient.assigned_bed %}
+                            <li>Free up the currently assigned bed</li>
+                            {% endif %}
+                            {% if patient.assigned_doctor %}
+                            <li>Release the currently assigned doctor</li>
+                            {% endif %}
+                            <li>Mark the patient as waiting for admission</li>
+                            <li>Allow the patient to be considered for admission when resources become available</li>
                         </ul>
                     </p>
                 </div>

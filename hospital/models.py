@@ -81,6 +81,8 @@ class Patient(models.Model):
     expected_stay_days = models.IntegerField(validators=[MinValueValidator(1)], default=1)
     notes = models.TextField(blank=True)
     required_equipment = models.JSONField(default=list, blank=True)
+    assigned_doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True, blank=True)
+    assigned_bed = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"

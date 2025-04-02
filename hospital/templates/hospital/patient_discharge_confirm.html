@@ -1,0 +1,100 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}Confirm Patient Discharge{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>Confirm Patient Discharge</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Name:</div>
+                    <div class="col-md-8">{{ patient.name }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Age:</div>
+                    <div class="col-md-8">{{ patient.age }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Gender:</div>
+                    <div class="col-md-8">{{ patient.gender }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Current Status:</div>
+                    <div class="col-md-8">
+                        <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                            {{ patient.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Diagnosis:</div>
+                    <div class="col-md-8">{{ patient.diagnosis }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Admission Date:</div>
+                    <div class="col-md-8">{{ patient.admission_date|date:"M d, Y H:i" }}</div>
+                </div>
+                
+                {% if patient.assigned_doctor %}
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Assigned Doctor:</div>
+                    <div class="col-md-8">Dr. {{ patient.assigned_doctor.user.get_full_name }}</div>
+                </div>
+                {% endif %}
+                
+                {% if patient.assigned_bed %}
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Assigned Bed:</div>
+                    <div class="col-md-8">{{ patient.assigned_bed.number }} ({{ patient.assigned_bed.ward }})</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Discharge Actions</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-sign-out-alt me-2"></i>Confirm Discharge
+                        </button>
+                        <a href="{% url 'hospital:patient_list' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+                <div class="alert alert-warning mt-4">
+                    <h6 class="alert-heading">Warning:</h6>
+                    <p class="mb-0">
+                        Discharging this patient will:
+                        <ul class="mb-0">
+                            <li>Release the assigned bed for other patients</li>
+                            <li>Remove the doctor assignment</li>
+                            <li>Mark all active assignments as inactive</li>
+                            <li>Change patient status to Discharged</li>
+                        </ul>
+                        This action cannot be undone.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

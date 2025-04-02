@@ -57,9 +57,9 @@ def optimize_assignments():
     for p in waiting_patients:
         for d in available_doctors:
             for b in available_beds:
-                if p.priority >= 4 and b.bed_type != 'ICU':  # Critical patients need ICU
+                if p.priority >= 4 and not ('ICU' in b.ward or 'Emergency' in b.ward):  # Critical patients need ICU or Emergency
                     prob += x[p.id, d.id, b.id] == 0
-                elif p.priority <= 1 and b.bed_type == 'ICU':  # Low priority patients don't need ICU
+                elif p.priority <= 1 and 'ICU' in b.ward:  # Low priority patients don't need ICU
                     prob += x[p.id, d.id, b.id] == 0
 
     # Solve the problem
@@ -85,9 +85,7 @@ def apply_assignments(assignments):
         bed.is_occupied = True
         bed.save()
 
-        # Update doctor's patient count
-        doctor.current_patients += 1
-        doctor.save()
+        # No need to manually update doctor's patient count as it's calculated dynamically
 
         # Update patient status and assignments
         patient.status = 'ADM'  # Admitted
@@ -100,8 +98,8 @@ def apply_assignments(assignments):
             patient=patient,
             doctor=doctor,
             bed=bed,
-            expected_end_date=date.today() + timedelta(days=patient.expected_stay_days),
-            priority_score=patient.priority
+            active=True,
+            notes=f"Auto-assigned during optimization. Patient priority: {patient.get_priority_display()}"
         )
 
 def run_optimization():

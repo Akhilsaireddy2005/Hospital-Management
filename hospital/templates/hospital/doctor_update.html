@@ -13,7 +13,7 @@
                 <div class="mb-4">
                     <h5>Doctor Information</h5>
                     <p><strong>Name:</strong> {{ object.user.get_full_name }}</p>
-                    <p><strong>Specialization:</strong> {{ object.specialization }}</p>
+                    <p><strong>Specialization:</strong> {{ object.specialty }}</p>
                     <p><strong>Current Patients:</strong> {{ object.current_patients }}</p>
                 </div>
 
@@ -43,6 +43,9 @@
                         </button>
                         <a href="{% url 'hospital:dashboard' %}" class="btn btn-secondary">
                             Cancel
+                        </a>
+                        <a href="{% url 'hospital:doctor_delete' object.pk %}" class="btn btn-danger">
+                            <i class="fas fa-trash-alt me-1"></i>Remove Doctor
                         </a>
                     </div>
                 </form>

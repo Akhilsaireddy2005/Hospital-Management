@@ -1,0 +1,85 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}Confirm Doctor Removal{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>Confirm Doctor Removal</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Doctor Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Name:</div>
+                    <div class="col-md-8">Dr. {{ doctor.user.get_full_name }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Specialty:</div>
+                    <div class="col-md-8">{{ doctor.specialty }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Current Patients:</div>
+                    <div class="col-md-8">
+                        {% if assigned_patients_count > 0 %}
+                        <span class="text-danger">{{ assigned_patients_count }} patients currently assigned</span>
+                        {% else %}
+                        <span class="text-success">No patients currently assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Status:</div>
+                    <div class="col-md-8">
+                        <span class="badge bg-{% if doctor.is_available %}success{% else %}danger{% endif %}">
+                            {{ doctor.is_available|yesno:"Available,Not Available" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Removal Actions</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-trash-alt me-2"></i>Confirm Removal
+                        </button>
+                        <a href="{% url 'hospital:doctor_list' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+                <div class="alert alert-warning mt-4">
+                    <h6 class="alert-heading">Warning:</h6>
+                    <p class="mb-0">
+                        Removing this doctor will:
+                        <ul class="mb-0">
+                            <li>Delete the doctor's profile</li>
+                            <li>Delete the associated user account</li>
+                            {% if assigned_patients_count > 0 %}
+                            <li class="text-danger"><strong>Unassign {{ assigned_patients_count }} patients currently under this doctor's care</strong></li>
+                            {% endif %}
+                        </ul>
+                        This action cannot be undone.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
