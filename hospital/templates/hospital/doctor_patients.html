@@ -1,0 +1,110 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}Doctor Patient Assignments{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Doctor Patient Assignments</h2>
+                <a href="{% url 'hospital:doctor_add' %}" class="btn btn-primary">
+                    <i class="fas fa-user-md me-2"></i>Add New Doctor
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for doctor in doctors %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user-md me-2"></i>Dr. {{ doctor.user.get_full_name }}
+                        </h5>
+                        <span class="badge bg-light text-primary">
+                            {{ doctor.patient_set.count }}/{{ doctor.max_patients }} Patients
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if doctor.specialty %}
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-stethoscope me-2"></i>{{ doctor.specialty }}
+                    </p>
+                    {% endif %}
+                    
+                    <h6 class="mb-3">Current Patients:</h6>
+                    {% if doctor.patient_set.all %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient Name</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Admission Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in doctor.patient_set.all %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-light rounded-circle p-2 me-2">
+                                                <i class="fas fa-user text-secondary"></i>
+                                            </div>
+                                            <div>
+                                                <p class="mb-0">{{ patient.name }}</p>
+                                                <small class="text-muted">ID: #{{ patient.id }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
+                                            {{ patient.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                                            {{ patient.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ patient.admission_date|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <div class="empty-state">
+                            <i class="fas fa-user-injured fa-3x text-muted mb-3"></i>
+                            <p>No patients assigned</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="empty-state">
+                        <i class="fas fa-user-md fa-4x text-muted mb-3"></i>
+                        <h5>No Doctors Available</h5>
+                        <p class="text-muted">Add doctors to start assigning patients</p>
+                        <a href="{% url 'hospital:doctor_add' %}" class="btn btn-primary mt-3">
+                            <i class="fas fa-plus me-2"></i>Add New Doctor
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

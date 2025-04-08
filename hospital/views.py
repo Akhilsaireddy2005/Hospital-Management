@@ -3,10 +3,21 @@ from django.contrib import messages
 from django.views.generic import ListView, CreateView, UpdateView
 from django.urls import reverse_lazy
 from django.utils import timezone
-from .models import Patient, Doctor, Bed, Equipment, Assignment
-from .forms import PatientAdmissionForm, DoctorAvailabilityForm, BedForm, DoctorCreateForm
+from .models import Patient, Doctor, Bed, Equipment, Assignment, EquipmentAssignment
+from .forms import PatientAdmissionForm, DoctorAvailabilityForm, BedForm, DoctorCreateForm, EquipmentAssignmentForm
 from .optimizer import run_optimization
 from django.db.models import Q
+import csv
+from django.http import HttpResponse
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from datetime import datetime
+from django.contrib.auth.decorators import login_required
 
 class DashboardView(ListView):
     model = Patient
@@ -47,21 +58,24 @@ class DashboardView(ListView):
         else:
             context['bed_usage_percent'] = 0
             
+        if context['total_doctors'] > 0:
+            context['doctor_availability_percent'] = (context['available_doctors'] / context['total_doctors']) * 100
+        else:
+            context['doctor_availability_percent'] = 0
+            
         return context
 
 class PatientAdmissionView(CreateView):
     model = Patient
     form_class = PatientAdmissionForm
     template_name = 'hospital/patient_admission.html'
-    success_url = reverse_lazy('hospital:dashboard')
+    success_url = reverse_lazy('hospital:patient_list')
 
     def form_valid(self, form):
+        # Set initial status to waiting
+        form.instance.status = 'WAI'
         response = super().form_valid(form)
         messages.success(self.request, f'Patient {self.object.name} has been added to the waiting list.')
-        # Run optimization after adding a new patient
-        assignments_made = run_optimization()
-        if assignments_made > 0:
-            messages.success(self.request, f'{assignments_made} new assignment(s) have been made.')
         return response
 
 def optimize_resources(request):
@@ -171,7 +185,7 @@ def patient_admission_confirm(request, pk):
             bed.save()
             
             # Update patient status
-            patient.status = 'ADM'  # Admitted
+            patient.status = 'TRE'  # Under Treatment instead of ADM
             patient.assigned_doctor = doctor
             patient.assigned_bed = bed
             patient.save()
@@ -184,7 +198,7 @@ def patient_admission_confirm(request, pk):
                 active=True
             )
             
-            messages.success(request, f'Patient {patient.name} has been successfully admitted.')
+            messages.success(request, f'Patient {patient.name} has been successfully admitted and is under treatment.')
         else:
             messages.warning(request, f'Could not find suitable assignment for {patient.name} at this time.')
         
@@ -288,3 +302,344 @@ def patient_waiting(request, pk):
     return render(request, 'hospital/patient_waiting_confirm.html', {
         'patient': patient
     })
+
+def bed_availability_view(request):
+    # Check if export is requested
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="bed_availability_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Ward', 'Bed Number', 'Status', 'Last Updated'])
+        
+        for bed in Bed.objects.all().order_by('ward', 'number'):
+            writer.writerow([
+                bed.ward,
+                bed.number,
+                'Occupied' if bed.is_occupied else 'Available',
+                bed.updated_at.strftime('%Y-%m-%d %H:%M:%S') if bed.updated_at else 'N/A'
+            ])
+        
+        return response
+    
+    # Get all beds grouped by ward
+    beds_by_ward = {}
+    for bed in Bed.objects.all().order_by('ward', 'number'):
+        if bed.ward not in beds_by_ward:
+            beds_by_ward[bed.ward] = []
+        beds_by_ward[bed.ward].append(bed)
+    
+    # Calculate statistics
+    total_beds = Bed.objects.count()
+    available_beds = Bed.objects.filter(is_occupied=False).count()
+    occupied_beds = total_beds - available_beds
+    
+    context = {
+        'beds_by_ward': beds_by_ward,
+        'total_beds': total_beds,
+        'available_beds': available_beds,
+        'occupied_beds': occupied_beds,
+        'bed_usage_percent': (occupied_beds / total_beds * 100) if total_beds > 0 else 0
+    }
+    
+    return render(request, 'hospital/bed_availability.html', context)
+
+def doctor_patients_view(request):
+    # Get all doctors with their assigned patients
+    doctors = Doctor.objects.prefetch_related('patient_set').all()
+    
+    context = {
+        'doctors': doctors,
+    }
+    return render(request, 'hospital/doctor_patients.html', context)
+
+@login_required
+def export_patients_pdf(request):
+    # Get all patients including discharged ones
+    patients = Patient.objects.all().order_by('-admission_date')
+    
+    # Create a BytesIO buffer for the PDF
+    buffer = BytesIO()
+    
+    # Create the PDF object with smaller margins for more space
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(letter),
+        rightMargin=20,
+        leftMargin=20,
+        topMargin=20,
+        bottomMargin=20
+    )
+    
+    # Container for the 'Flowable' objects
+    elements = []
+    
+    # Define styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=20,
+        alignment=1  # Center alignment
+    )
+    
+    # Create custom styles for cells with smaller font size
+    normal_style = ParagraphStyle(
+        'NormalWithWrap',
+        parent=styles['Normal'],
+        fontSize=8,
+        leading=10,
+        alignment=0  # Left alignment
+    )
+    
+    center_style = ParagraphStyle(
+        'CenterWithWrap',
+        parent=styles['Normal'],
+        fontSize=8,
+        leading=10,
+        alignment=1  # Center alignment
+    )
+    
+    # Add hospital title
+    elements.append(Paragraph("Hospital Patient List", title_style))
+    elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 
+                            ParagraphStyle('Date', parent=styles['Normal'], fontSize=10, alignment=1)))
+    elements.append(Spacer(1, 10))
+    
+    # Define the table data with paragraphs for wrapping
+    data = [[
+        Paragraph('ID', center_style),
+        Paragraph('Name', center_style),
+        Paragraph('Status', center_style),
+        Paragraph('Priority', center_style),
+        Paragraph('Doctor', center_style),
+        Paragraph('Equipment', center_style),
+        Paragraph('Admission Date', center_style),
+        Paragraph('Actions', center_style)
+    ]]
+    
+    # Add patient data
+    for patient in patients:
+        # Format doctor name
+        doctor_name = f"Dr. {patient.assigned_doctor.user.get_full_name()}" if patient.assigned_doctor else "Not assigned"
+        
+        # Format equipment list
+        equipment_list = ", ".join(patient.required_equipment) if patient.required_equipment else "No equipment required"
+        
+        # Get status for actions column
+        status_map = {
+            'WAI': 'Waiting',
+            'ADM': 'Admitted',
+            'TRE': 'Under Treatment',
+            'DIS': 'Discharged'
+        }
+        action_status = status_map.get(patient.status, 'Unknown')
+        
+        # Add row data with paragraphs for wrapping
+        data.append([
+            Paragraph(f"#{patient.id}", center_style),
+            Paragraph(patient.name, normal_style),
+            Paragraph(patient.get_status_display(), center_style),
+            Paragraph(patient.get_priority_display(), center_style),
+            Paragraph(doctor_name, normal_style),
+            Paragraph(equipment_list, normal_style),
+            Paragraph(patient.admission_date.strftime("%Y-%m-%d %H:%M"), center_style),
+            Paragraph(action_status, center_style)  # Show current status in Actions column
+        ])
+    
+    # Create the table with adjusted column widths
+    # Added width for Actions column
+    table = Table(data, colWidths=[35, 120, 70, 60, 120, 120, 80, 80])
+    
+    # Add style to the table
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ROWHEIGHT', (0, 0), (-1, -1), 35),  # Slightly increased for action lists
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        # Add zebra striping
+        *[('BACKGROUND', (0, i), (-1, i), colors.lightgrey) for i in range(2, len(data), 2)],
+        # Add borders
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    
+    elements.append(table)
+    
+    # Generate the PDF
+    doc.build(elements)
+    
+    # Get the value of the BytesIO buffer and write it to the response
+    pdf = buffer.getvalue()
+    buffer.close()
+    
+    # Create the HttpResponse object with the appropriate PDF headers
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="patient_list_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
+    response.write(pdf)
+    return response
+
+@login_required
+def assign_equipment(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+    assigned_equipment = EquipmentAssignment.objects.filter(patient=patient, active=True).values_list('equipment_id', flat=True)
+    available_equipment = Equipment.objects.filter(status='AV')
+    
+    if request.method == 'POST':
+        equipment_id = request.POST.get('equipment')
+        if equipment_id:
+            equipment = get_object_or_404(Equipment, id=equipment_id)
+            
+            # Check if equipment is already assigned
+            if not EquipmentAssignment.objects.filter(patient=patient, equipment=equipment, active=True).exists():
+                # Create new assignment
+                EquipmentAssignment.objects.create(
+                    patient=patient,
+                    equipment=equipment,
+                    active=True
+                )
+                
+                # Update equipment status
+                equipment.status = 'NA'  # Not Available
+                equipment.save()
+                
+                messages.success(request, f'Equipment {equipment.name} has been assigned to {patient.name}.')
+            else:
+                messages.warning(request, f'Equipment {equipment.name} is already assigned to {patient.name}.')
+            
+            return redirect('hospital:assign_equipment', patient_id=patient.id)
+    
+    return render(request, 'hospital/assign_equipment.html', {
+        'patient': patient,
+        'available_equipment': available_equipment,
+        'assigned_equipment': assigned_equipment
+    })
+
+@login_required
+def patient_detail(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    available_doctors = Doctor.objects.filter(is_available=True)
+    return render(request, 'hospital/patient_detail.html', {
+        'patient': patient,
+        'available_doctors': available_doctors
+    })
+
+@login_required
+def unassign_equipment(request, patient_id, equipment_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+    equipment = get_object_or_404(Equipment, id=equipment_id)
+    
+    if request.method == 'POST':
+        # Remove equipment from patient's required equipment list
+        if equipment_id in patient.required_equipment:
+            patient.required_equipment.remove(equipment_id)
+            patient.save()
+            
+            # Update equipment status to available
+            equipment.status = 'AV'
+            equipment.save()
+            
+            messages.success(request, f'Equipment {equipment.name} has been unassigned from {patient.name}.')
+        else:
+            messages.warning(request, f'Equipment {equipment.name} was not assigned to {patient.name}.')
+    
+    return redirect('hospital:assign_equipment', patient_id=patient.id)
+
+@login_required
+def assign_doctor(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+    
+    if request.method == 'POST':
+        doctor_id = request.POST.get('doctor')
+        if doctor_id:
+            doctor = get_object_or_404(Doctor, id=doctor_id)
+            
+            # Check if doctor is available and not at max capacity
+            if doctor.is_available and doctor.current_patients < doctor.max_patients:
+                # Update patient's assigned doctor
+                patient.assigned_doctor = doctor
+                patient.save()
+                
+                # Create assignment record
+                Assignment.objects.create(
+                    patient=patient,
+                    doctor=doctor,
+                    bed=patient.assigned_bed if patient.assigned_bed else None,
+                    active=True
+                )
+                
+                messages.success(request, f'Dr. {doctor.user.get_full_name()} has been assigned to {patient.name}.')
+            else:
+                messages.warning(request, f'Dr. {doctor.user.get_full_name()} is not available or has reached maximum patient capacity.')
+    
+    return redirect('hospital:patient_detail', pk=patient.id)
+
+@login_required
+def unassign_doctor(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+    
+    if request.method == 'POST':
+        if patient.assigned_doctor:
+            doctor_name = patient.assigned_doctor.user.get_full_name()
+            patient.assigned_doctor = None
+            patient.save()
+            
+            # Update any active assignments to inactive
+            Assignment.objects.filter(patient=patient, active=True).update(active=False)
+            
+            messages.success(request, f'Dr. {doctor_name} has been unassigned from {patient.name}.')
+        else:
+            messages.warning(request, f'No doctor is currently assigned to {patient.name}.')
+    
+    return redirect('hospital:patient_detail', pk=patient.id)
+
+@login_required
+def dashboard(request):
+    # Get counts
+    waiting_patients = Patient.objects.filter(status='WAI').count()
+    admitted_patients = Patient.objects.filter(status='ADM').count()
+    discharged_patients = Patient.objects.filter(status='DIS').count()
+    available_beds = Bed.objects.filter(is_occupied=False).count()
+    total_beds = Bed.objects.count()
+    available_doctors = Doctor.objects.filter(is_available=True).count()
+    total_doctors = Doctor.objects.count()
+    total_equipment = Equipment.objects.count()
+
+    # Calculate percentages
+    bed_usage_percent = ((total_beds - available_beds) / total_beds * 100) if total_beds > 0 else 0
+    doctor_availability_percent = (available_doctors / total_doctors * 100) if total_doctors > 0 else 0
+
+    # Group beds by ward
+    beds_by_ward = {}
+    for bed in Bed.objects.all().order_by('ward_type', 'number'):
+        ward = bed.get_ward_type_display()
+        if ward not in beds_by_ward:
+            beds_by_ward[ward] = []
+        beds_by_ward[ward].append(bed)
+
+    context = {
+        'waiting_patients': waiting_patients,
+        'admitted_patients': admitted_patients,
+        'discharged_patients': discharged_patients,
+        'available_beds': available_beds,
+        'total_beds': total_beds,
+        'available_doctors': available_doctors,
+        'total_doctors': total_doctors,
+        'total_equipment': total_equipment,
+        'bed_usage_percent': bed_usage_percent,
+        'doctor_availability_percent': doctor_availability_percent,
+        'beds_by_ward': beds_by_ward,
+    }
+    return render(request, 'hospital/dashboard.html', context)

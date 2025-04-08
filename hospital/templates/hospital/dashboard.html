@@ -1,273 +1,290 @@
 {% extends 'hospital/base.html' %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Hospital Dashboard{% endblock %}
 
 {% block content %}
-<style>
-    .bg-primary-light { background-color: rgba(52, 152, 219, 0.1); }
-    .bg-success-light { background-color: rgba(39, 174, 96, 0.1); }
-    .bg-info-light { background-color: rgba(52, 152, 219, 0.1); }
-    .bg-warning-light { background-color: rgba(243, 156, 18, 0.1); }
-    .bg-danger-light { background-color: rgba(231, 76, 60, 0.1); }
-    
-    .avatar {
-        width: 2rem;
-        height: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .stats-icon {
-        width: 3rem;
-        height: 3rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-</style>
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2 class="mb-0"><i class="fas fa-chart-line me-2"></i>Hospital Dashboard</h2>
-            <div class="d-flex">
-                <button class="btn btn-outline-primary me-2">
-                    <i class="fas fa-sync-alt me-1"></i> Refresh
-                </button>
-                <button class="btn btn-outline-success">
-                    <i class="fas fa-file-export me-1"></i> Export
-                </button>
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-0">Hospital Management System</h2>
+                            <p class="mb-0">Welcome to your dashboard</p>
+                        </div>
+                        <div class="text-end">
+                            <p class="mb-0">Current Time: <span id="current-time"></span></p>
+                            <p class="mb-0">Date: <span id="current-date"></span></p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="stats-card bg-white">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="stats-icon bg-primary-light rounded-circle p-3">
-                    <i class="fas fa-user-clock fa-2x text-primary"></i>
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- Waiting Patients -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Waiting Patients</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ waiting_patients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-warning"></i>
+                        </div>
+                    </div>
                 </div>
-                <span class="badge bg-warning text-dark">
-                    <i class="fas fa-hourglass-half me-1"></i> Waiting
-                </span>
-            </div>
-            <div class="stats-number text-primary">{{ waiting_patients }}</div>
-            <div class="stats-label">Waiting Patients</div>
-            <div class="progress mt-3" style="height: 6px;">
-                <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" data-value="{{ waiting_patients_percent|floatformat:0 }}"></div>
             </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stats-card bg-white">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="stats-icon bg-success-light rounded-circle p-3">
-                    <i class="fas fa-procedures fa-2x text-success"></i>
-                </div>
-                <span class="badge bg-success text-white">
-                    <i class="fas fa-bed me-1"></i> Admitted
-                </span>
-            </div>
-            <div class="stats-number text-success">{{ admitted_patients }}</div>
-            <div class="stats-label">Admitted Patients</div>
-            <div class="progress mt-3" style="height: 6px;">
-                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-value="{{ admitted_percent|floatformat:0 }}"></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stats-card bg-white">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="stats-icon bg-danger-light rounded-circle p-3">
-                    <i class="fas fa-sign-out-alt fa-2x text-danger"></i>
-                </div>
-                <span class="badge bg-danger text-white">
-                    <i class="fas fa-sign-out-alt me-1"></i> Discharged
-                </span>
-            </div>
-            <div class="stats-number text-danger">{{ discharged_patients }}</div>
-            <div class="stats-label">Discharged Patients</div>
-            <div class="progress mt-3" style="height: 6px;">
-                <div class="progress-bar bg-danger" role="progressbar" style="width: 0%" data-value="{{ discharged_percent|floatformat:0 }}"></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stats-card bg-white">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="stats-icon bg-info-light rounded-circle p-3">
-                    <i class="fas fa-users fa-2x text-info"></i>
-                </div>
-                <span class="badge bg-info text-white">
-                    <i class="fas fa-users me-1"></i> Total
-                </span>
-            </div>
-            <div class="stats-number text-info">{{ total_patients }}</div>
-            <div class="stats-label">Total Patients</div>
-            <div class="progress mt-3" style="height: 6px;">
-                <div class="progress-bar bg-info" role="progressbar" style="width: 100%"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-8">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0"><i class="fas fa-clipboard-list me-2"></i>Recent Patient Activity</h5>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-filter me-1"></i> Filter
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                        <li><a class="dropdown-item" href="#">All Patients</a></li>
-                        <li><a class="dropdown-item" href="#">Waiting</a></li>
-                        <li><a class="dropdown-item" href="#">Admitted</a></li>
-                    </ul>
+        <!-- Admitted Patients -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Admitted Patients</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ admitted_patients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-procedures fa-2x text-success"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Patient</th>
-                                <th>Status</th>
-                                <th>Priority</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for patient in recent_patients %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar avatar-sm bg-light rounded-circle p-2 me-2">
-                                            <i class="fas fa-user text-secondary"></i>
-                                        </div>
-                                        <div>
-                                            <p class="mb-0 fw-medium">{{ patient.name }}</p>
-                                            <small class="text-muted">ID: #{{ patient.id }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
-                                        <i class="fas fa-{% if patient.status == 'WAI' %}hourglass-half{% elif patient.status == 'ADM' %}bed{% elif patient.status == 'TRE' %}stethoscope{% else %}question-circle{% endif %} me-1"></i>
-                                        {{ patient.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
-                                        <i class="fas fa-{% if patient.priority >= 4 %}exclamation-circle{% elif patient.priority >= 3 %}exclamation{% else %}info-circle{% endif %} me-1"></i>
-                                        {{ patient.get_priority_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <i class="far fa-calendar-alt me-1 text-muted"></i>
-                                    {{ patient.admission_date|date:"M d, Y" }}
-                                </td>
-                                <td>
-                                    {% if patient.status == 'WAI' %}
-                                    <a href="{% url 'hospital:patient_confirm' patient.pk %}" class="btn btn-sm btn-success">
-                                        <i class="fas fa-check-circle me-1"></i>Admit
-                                    </a>
-                                    {% elif patient.status == 'ADM' or patient.status == 'TRE' %}
-                                    <div class="btn-group">
-                                        <a href="#" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye me-1"></i>View
-                                        </a>
-                                        <a href="{% url 'hospital:patient_discharge' patient.pk %}" class="btn btn-sm btn-outline-danger">
-                                            <i class="fas fa-sign-out-alt me-1"></i>Discharge
-                                        </a>
-                                        <a href="{% url 'hospital:patient_waiting' patient.pk %}" class="btn btn-sm btn-outline-warning">
-                                            <i class="fas fa-hourglass-half me-1"></i>Wait
-                                        </a>
-                                    </div>
-                                    {% else %}
-                                    <a href="#" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye me-1"></i>View
-                                    </a>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-4">
-                                    <div class="empty-state">
-                                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                                        <p>No recent patient activity</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        </div>
+
+        <!-- Discharged Patients -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-secondary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                Discharged Patients</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ discharged_patients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-sign-out-alt fa-2x text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Beds -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Available Beds</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ available_beds }}/{{ total_beds }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-bed fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Doctors -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Available Doctors</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ available_doctors }}/{{ total_doctors }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-md fa-2x text-primary"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i class="fas fa-tasks me-2"></i>Resource Summary</h5>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Recent Patients -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Patients</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                            data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                            aria-labelledby="dropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'hospital:patient_list' %}">View All Patients</a>
+                            <a class="dropdown-item" href="{% url 'hospital:patient_admit' %}">Add New Patient</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Doctor</th>
+                                    <th>Admission Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in recent_patients %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-light rounded-circle p-2 me-2">
+                                                <i class="fas fa-user text-secondary"></i>
+                                            </div>
+                                            <div>
+                                                <p class="mb-0 fw-medium">{{ patient.name }}</p>
+                                                <small class="text-muted">ID: #{{ patient.id }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                                            {{ patient.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
+                                            {{ patient.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if patient.assigned_doctor %}
+                                            Dr. {{ patient.assigned_doctor.user.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ patient.admission_date|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-4">
-                    <div class="progress flex-grow-1 me-3" style="height: 10px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-value="{{ bed_usage_percent|floatformat:0 }}"></div>
-                    </div>
-                    <span class="fw-bold" id="bed-usage-percent">{{ bed_usage_percent|floatformat:0 }}%</span>
+        </div>
+
+        <!-- Quick Actions and Resources -->
+        <div class="col-xl-4 col-lg-5">
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
                 </div>
-                <div class="resource-item d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <p class="mb-0 fw-medium">Available Beds</p>
-                        <small class="text-muted">General Ward</small>
-                    </div>
-                    <span class="badge bg-success-light text-success">{{ available_beds }}</span>
-                </div>
-                <div class="resource-item d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <p class="mb-0 fw-medium">Total Beds</p>
-                        <small class="text-muted">All Wards</small>
-                    </div>
-                    <span class="badge bg-warning-light text-warning">{{ total_beds }}</span>
-                </div>
-                <div class="resource-item d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <p class="mb-0 fw-medium">Available Doctors</p>
-                        <small class="text-muted">On Duty</small>
-                    </div>
-                    <span class="badge bg-info-light text-info">{{ available_doctors }}</span>
-                </div>
-                <div class="resource-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <p class="mb-0 fw-medium">Medical Equipment</p>
-                        <small class="text-muted">Total Units</small>
-                    </div>
-                    <span class="badge bg-primary-light text-primary">{{ total_equipment }}</span>
-                </div>
-                
-                <div class="mt-4">
-                    <h6 class="mb-3">Quick Actions</h6>
+                <div class="card-body">
                     <div class="d-grid gap-2">
                         <a href="{% url 'hospital:patient_admit' %}" class="btn btn-primary">
                             <i class="fas fa-user-plus me-2"></i>Add New Patient
                         </a>
-                        <a href="{% url 'solver' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'hospital:doctor_add' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-md me-2"></i>Add New Doctor
+                        </a>
+                        <a href="{% url 'hospital:bed_add' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-bed me-2"></i>Add New Bed
+                        </a>
+                        <a href="{% url 'hospital:optimize' %}" class="btn btn-outline-primary">
                             <i class="fas fa-cog me-2"></i>Run Resource Optimizer
                         </a>
+                        <a href="{% url 'hospital:export_patients_pdf' %}" class="btn btn-outline-success">
+                            <i class="fas fa-file-pdf me-2"></i>Export Patient List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Status -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Resource Status</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Bed Usage -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Bed Usage</span>
+                            <span>{{ bed_usage_percent|floatformat:1 }}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" 
+                                 role="progressbar" 
+                                 data-width="{{ bed_usage_percent }}"
+                                 aria-valuenow="{{ bed_usage_percent }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Bed List -->
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold mb-3">Bed Status by Ward</h6>
+                        {% for ward, beds in beds_by_ward.items %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">{{ ward }}</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for bed in beds %}
+                                <span class="badge {% if bed.is_occupied %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ bed.number }} {% if bed.is_occupied %}(Occupied){% else %}(Available){% endif %}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Doctor Availability -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Doctor Availability</span>
+                            <span>{{ doctor_availability_percent|floatformat:1 }}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" 
+                                 role="progressbar" 
+                                 data-width="{{ doctor_availability_percent }}"
+                                 aria-valuenow="{{ doctor_availability_percent }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Equipment Status -->
+                    <div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Equipment Status</span>
+                            <span>{{ total_equipment }} Units</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                 style="width: 100%" 
+                                 aria-valuenow="100" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -275,129 +292,22 @@
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0"><i class="fas fa-user-md me-2"></i>Available Doctors</h5>
-                <a href="{% url 'hospital:doctor_list' %}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-eye me-1"></i>View All
-                </a>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Doctor</th>
-                                <th>Specialty</th>
-                                <th>Patients</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for doctor in available_doctors_list %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar avatar-sm bg-info-light rounded-circle p-2 me-2">
-                                            <i class="fas fa-user-md text-info"></i>
-                                        </div>
-                                        <div>{{ doctor.user.get_full_name }}</div>
-                                    </div>
-                                </td>
-                                <td>{{ doctor.specialty }}</td>
-                                <td>
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div class="badge {% if doctor.current_patients == doctor.max_patients %}bg-danger{% elif doctor.current_patients >= 2 %}bg-warning{% else %}bg-success{% endif %} rounded-pill px-2">
-                                            {{ doctor.current_patients }}/{{ doctor.max_patients }}
-                                        </div>
-                                        {% if doctor.current_patients < doctor.max_patients %}
-                                            <small class="text-success">Available</small>
-                                        {% else %}
-                                            <small class="text-danger">Full</small>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="text-center py-3">
-                                    <div class="empty-state">
-                                        <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
-                                        <p>No available doctors</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0"><i class="fas fa-bed me-2"></i>Available Beds</h5>
-                <a href="{% url 'hospital:bed_add' %}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-plus me-1"></i>Add Bed
-                </a>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Bed Number</th>
-                                <th>Ward</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for bed in available_beds_list %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar avatar-sm bg-success-light rounded-circle p-2 me-2">
-                                            <i class="fas fa-bed text-success"></i>
-                                        </div>
-                                        <div>{{ bed.number }}</div>
-                                    </div>
-                                </td>
-                                <td>{{ bed.ward }}</td>
-                                <td>
-                                    <span class="badge bg-success">Available</span>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="text-center py-3">
-                                    <div class="empty-state">
-                                        <i class="fas fa-bed fa-3x text-muted mb-3"></i>
-                                        <p>No available beds</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
+<!-- JavaScript for real-time clock and progress bars -->
 <script>
+    function updateDateTime() {
+        const now = new Date();
+        document.getElementById('current-time').textContent = now.toLocaleTimeString();
+        document.getElementById('current-date').textContent = now.toLocaleDateString();
+    }
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
+    // Update progress bars
     document.addEventListener('DOMContentLoaded', function() {
-        // Update progress bars with data-value attribute
-        const progressBars = document.querySelectorAll('.progress-bar[data-value]');
-        progressBars.forEach(function(bar) {
-            const value = bar.getAttribute('data-value') || '0';
-            setTimeout(() => {
-                bar.style.width = value + '%';
-            }, 100);
+        const progressBars = document.querySelectorAll('.progress-bar[data-width]');
+        progressBars.forEach(bar => {
+            const width = bar.getAttribute('data-width');
+            bar.style.width = `${width}%`;
         });
     });
 </script>

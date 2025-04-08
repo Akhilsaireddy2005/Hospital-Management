@@ -1,0 +1,102 @@
+{% extends 'hospital/base.html' %}
+
+{% block title %}{{ patient.name }} - Patient Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Patient Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Name:</div>
+                        <div class="col-md-8">{{ patient.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Status:</div>
+                        <div class="col-md-8">
+                            <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                                {{ patient.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Priority:</div>
+                        <div class="col-md-8">
+                            <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
+                                {{ patient.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Assigned Doctor:</div>
+                        <div class="col-md-8">
+                            {% if patient.assigned_doctor %}
+                                Dr. {{ patient.assigned_doctor.user.get_full_name }}
+                                <form method="post" action="{% url 'hospital:unassign_doctor' patient.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm ms-2">Unassign</button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Admission Date:</div>
+                        <div class="col-md-8">{{ patient.admission_date|date:"Y-m-d H:i" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Assign Doctor</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'hospital:assign_doctor' patient.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="doctor" class="form-label">Select Doctor</label>
+                            <select name="doctor" id="doctor" class="form-select">
+                                <option value="">Choose a doctor...</option>
+                                {% for doctor in available_doctors %}
+                                    <option value="{{ doctor.id }}">Dr. {{ doctor.user.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Assign Doctor</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'hospital:assign_equipment' patient.id %}" class="btn btn-outline-primary">
+                            <i class="fas fa-tools me-2"></i>Assign Equipment
+                        </a>
+                        {% if patient.status == 'WAI' %}
+                            <a href="{% url 'hospital:patient_confirm' patient.id %}" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>Admit Patient
+                            </a>
+                        {% elif patient.status == 'TRE' %}
+                            <a href="{% url 'hospital:patient_discharge' patient.id %}" class="btn btn-warning">
+                                <i class="fas fa-sign-out-alt me-2"></i>Discharge Patient
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

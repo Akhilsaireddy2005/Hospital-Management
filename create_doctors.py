@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from hospital.models import Doctor
+from hospital.models import Doctor, Bed
 
 # Create doctor 1
 try:
@@ -58,4 +58,6 @@ try:
 except Exception as e:
     print(f"Error creating doctor 3: {e}")
 
-print("Doctor creation complete!") 
+print("Doctor creation complete!")
+
+available_beds = Bed.objects.filter(is_occupied=False).count() 

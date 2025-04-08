@@ -72,4 +72,32 @@ class DoctorCreateForm(forms.ModelForm):
         doctor.user = user
         if commit:
             doctor.save()
-        return doctor 
+        return doctor
+
+class EquipmentAssignmentForm(forms.ModelForm):
+    equipment = forms.ModelMultipleChoiceField(
+        queryset=Equipment.objects.filter(status='AV'),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False
+    )
+
+    class Meta:
+        model = Patient
+        fields = ['required_equipment']
+        widgets = {
+            'required_equipment': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance:
+            # Set initial equipment based on patient's required_equipment
+            self.fields['equipment'].initial = self.instance.required_equipment
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Update the required_equipment field with selected equipment
+        instance.required_equipment = [str(eq.id) for eq in self.cleaned_data['equipment']]
+        if commit:
+            instance.save()
+        return instance 

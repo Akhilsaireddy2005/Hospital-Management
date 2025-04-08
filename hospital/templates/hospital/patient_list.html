@@ -7,13 +7,26 @@
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
             <h2>Patient List</h2>
-            <div class="btn-group">
-                <a href="{% url 'hospital:patient_list' %}" class="btn btn-outline-primary {% if not request.GET.status %}active{% endif %}">All</a>
-                <a href="{% url 'hospital:patient_list' %}?status=WAI" class="btn btn-outline-primary {% if request.GET.status == 'WAI' %}active{% endif %}">Waiting</a>
-                <a href="{% url 'hospital:patient_list' %}?status=ADM" class="btn btn-outline-primary {% if request.GET.status == 'ADM' %}active{% endif %}">Admitted</a>
-                <a href="{% url 'hospital:patient_list' %}?status=TRE" class="btn btn-outline-primary {% if request.GET.status == 'TRE' %}active{% endif %}">Under Treatment</a>
-                <a href="{% url 'hospital:patient_list' %}?status=DIS" class="btn btn-outline-primary {% if request.GET.status == 'DIS' %}active{% endif %}">Discharged</a>
+            <div>
+                <a href="{% url 'hospital:export_patients_pdf' %}" class="btn btn-secondary me-2">
+                    <i class="fas fa-file-pdf me-2"></i>Export to PDF
+                </a>
+                <a href="{% url 'hospital:patient_admit' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add New Patient
+                </a>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="btn-group">
+            <a href="{% url 'hospital:patient_list' %}" class="btn btn-outline-primary {% if not request.GET.status %}active{% endif %}">All</a>
+            <a href="{% url 'hospital:patient_list' %}?status=WAI" class="btn btn-outline-primary {% if request.GET.status == 'WAI' %}active{% endif %}">Waiting</a>
+            <a href="{% url 'hospital:patient_list' %}?status=ADM" class="btn btn-outline-primary {% if request.GET.status == 'ADM' %}active{% endif %}">Admitted</a>
+            <a href="{% url 'hospital:patient_list' %}?status=TRE" class="btn btn-outline-primary {% if request.GET.status == 'TRE' %}active{% endif %}">Under Treatment</a>
+            <a href="{% url 'hospital:patient_list' %}?status=DIS" class="btn btn-outline-primary {% if request.GET.status == 'DIS' %}active{% endif %}">Discharged</a>
         </div>
     </div>
 </div>
@@ -23,14 +36,14 @@
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Age</th>
-                                <th>Status</th>
+                                <th>Patient</th>
                                 <th>Priority</th>
-                                <th>Assigned to</th>
+                                <th>Status</th>
+                                <th>Assigned Doctor</th>
+                                <th>Medical Equipment</th>
                                 <th>Admission Date</th>
                                 <th>Actions</th>
                             </tr>
@@ -38,12 +51,16 @@
                         <tbody>
                             {% for patient in patients %}
                             <tr>
-                                <td>{{ patient.name }}</td>
-                                <td>{{ patient.age }}</td>
                                 <td>
-                                    <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
-                                        {{ patient.get_status_display }}
-                                    </span>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-user text-secondary"></i>
+                                        </div>
+                                        <div>
+                                            <p class="mb-0 fw-medium">{{ patient.name }}</p>
+                                            <small class="text-muted">ID: #{{ patient.id }}</small>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="badge bg-{% if patient.priority >= 4 %}danger{% elif patient.priority >= 3 %}warning{% else %}info{% endif %}">
@@ -51,45 +68,73 @@
                                     </span>
                                 </td>
                                 <td>
+                                    <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                                        {{ patient.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
                                     {% if patient.assigned_doctor %}
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar avatar-sm bg-info-light rounded-circle p-2 me-2">
-                                                <i class="fas fa-user-md text-info"></i>
-                                            </div>
-                                            <small>Dr. {{ patient.assigned_doctor.user.get_full_name }}</small>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-sm bg-info-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-user-md text-info"></i>
                                         </div>
-                                        {% if patient.assigned_bed %}
-                                            <div class="mt-1">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-bed me-1"></i>{{ patient.assigned_bed.number }}
-                                                </small>
-                                            </div>
-                                        {% endif %}
+                                        <div>
+                                            <p class="mb-0">Dr. {{ patient.assigned_doctor.user.get_full_name }}</p>
+                                            {% if patient.assigned_doctor.specialty %}
+                                            <small class="text-muted">{{ patient.assigned_doctor.specialty }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     {% else %}
-                                        <span class="text-muted">-</span>
+                                    <span class="text-muted">Not assigned</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ patient.admission_date|date:"M d, Y H:i" }}</td>
                                 <td>
-                                    {% if patient.status == 'WAI' %}
-                                    <a href="{% url 'hospital:patient_confirm' patient.pk %}" class="btn btn-sm btn-success">
-                                        Admit Patient
-                                    </a>
-                                    {% elif patient.status == 'ADM' or patient.status == 'TRE' %}
+                                    {% if patient.assigned_equipment.all %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for equipment in patient.assigned_equipment.all %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-tools me-1"></i>{{ equipment.name }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">No equipment assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ patient.admission_date|date:"Y-m-d H:i" }}</td>
+                                <td>
                                     <div class="btn-group">
-                                        <a href="{% url 'hospital:patient_discharge' patient.pk %}" class="btn btn-sm btn-danger">
+                                        {% if patient.status == 'WAI' %}
+                                        <a href="{% url 'hospital:patient_confirm' patient.id %}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-bed me-1"></i>Admit
+                                        </a>
+                                        {% elif patient.status == 'ADM' %}
+                                        <a href="{% url 'hospital:patient_discharge' patient.id %}" class="btn btn-sm btn-danger">
                                             <i class="fas fa-sign-out-alt me-1"></i>Discharge
                                         </a>
-                                        <a href="{% url 'hospital:patient_waiting' patient.pk %}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-hourglass-half me-1"></i>Wait
-                                        </a>
+                                        {% elif patient.status == 'TRE' %}
+                                        <div>
+                                            <span class="badge bg-info mb-1">
+                                                <i class="fas fa-stethoscope me-1"></i>Under Treatment
+                                            </span>
+                                        </div>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-check-circle me-1"></i>Discharged
+                                        </span>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center">No patients found</td>
+                                <td colspan="6" class="text-center py-3">
+                                    <div class="empty-state">
+                                        <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
+                                        <p>No patients found</p>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

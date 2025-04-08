@@ -97,3 +97,17 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"{self.patient.name} - Dr. {self.doctor.user.get_full_name()}"
+
+class EquipmentAssignment(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
+    assigned_date = models.DateTimeField(auto_now_add=True)
+    active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.patient.name} - {self.equipment.name}"
+
+    class Meta:
+        unique_together = ('patient', 'equipment')
+        ordering = ['-assigned_date']
