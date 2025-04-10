@@ -18,7 +18,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4 fw-bold">Status:</div>
                         <div class="col-md-8">
-                            <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'ADM' %}success{% elif patient.status == 'TRE' %}info{% else %}secondary{% endif %}">
+                            <span class="badge bg-{% if patient.status == 'WAI' %}warning{% elif patient.status == 'TRE' %}success{% else %}secondary{% endif %}">
                                 {{ patient.get_status_display }}
                             </span>
                         </div>
@@ -35,11 +35,17 @@
                         <div class="col-md-4 fw-bold">Assigned Doctor:</div>
                         <div class="col-md-8">
                             {% if patient.assigned_doctor %}
-                                Dr. {{ patient.assigned_doctor.user.get_full_name }}
-                                <form method="post" action="{% url 'hospital:unassign_doctor' patient.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm ms-2">Unassign</button>
-                                </form>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">Dr. {{ patient.assigned_doctor.user.get_full_name }}</span>
+                                    {% if patient.status == 'TRE' %}
+                                        <form method="post" action="{% url 'hospital:unassign_doctor' patient_id=patient.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to unassign this doctor?');">
+                                                <i class="fas fa-user-minus me-1"></i>Unassign
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             {% else %}
                                 <span class="text-muted">Not assigned</span>
                             {% endif %}
@@ -51,31 +57,59 @@
                     </div>
                 </div>
             </div>
+
+            {% if available_doctors and not patient.assigned_doctor and patient.status == 'TRE' %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Available Doctors</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Doctor Name</th>
+                                    <th>Current Patients</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doctor in available_doctors %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-light rounded-circle p-2 me-2">
+                                                <i class="fas fa-user-md text-primary"></i>
+                                            </div>
+                                            <div>Dr. {{ doctor.user.get_full_name }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if doctor.current_patients == 0 %}success{% elif doctor.current_patients < 3 %}info{% else %}warning{% endif %}">
+                                            {{ doctor.current_patients }} patients
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form action="{% url 'hospital:assign_doctor' patient_id=patient.id %}" method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="doctor" value="{{ doctor.id }}">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-user-plus me-1"></i>Assign
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
         
         <div class="col-md-4">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Assign Doctor</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'hospital:assign_doctor' patient.id %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="doctor" class="form-label">Select Doctor</label>
-                            <select name="doctor" id="doctor" class="form-select">
-                                <option value="">Choose a doctor...</option>
-                                {% for doctor in available_doctors %}
-                                    <option value="{{ doctor.id }}">Dr. {{ doctor.user.get_full_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Assign Doctor</button>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="card mt-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Quick Actions</h5>
                 </div>
@@ -89,9 +123,12 @@
                                 <i class="fas fa-check me-2"></i>Admit Patient
                             </a>
                         {% elif patient.status == 'TRE' %}
-                            <a href="{% url 'hospital:patient_discharge' patient.id %}" class="btn btn-warning">
-                                <i class="fas fa-sign-out-alt me-2"></i>Discharge Patient
-                            </a>
+                            <form action="{% url 'hospital:patient_discharge' pk=patient.id %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Are you sure you want to discharge this patient?');">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Discharge Patient
+                                </button>
+                            </form>
                         {% endif %}
                     </div>
                 </div>

@@ -30,7 +30,7 @@ class DashboardView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['waiting_patients'] = Patient.objects.filter(status='WAI').count()
-        context['admitted_patients'] = Patient.objects.filter(status='ADM').count()
+        context['admitted_patients'] = Patient.objects.filter(status='TRE').count()
         context['treated_patients'] = Patient.objects.filter(status='TRE').count()
         context['discharged_patients'] = Patient.objects.filter(status='DIS').count()
         context['total_patients'] = Patient.objects.count()
@@ -353,7 +353,6 @@ def doctor_patients_view(request):
     }
     return render(request, 'hospital/doctor_patients.html', context)
 
-@login_required
 def export_patients_pdf(request):
     # Get all patients including discharged ones
     patients = Patient.objects.all().order_by('-admission_date')
@@ -491,148 +490,183 @@ def export_patients_pdf(request):
     response.write(pdf)
     return response
 
-@login_required
 def assign_equipment(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     assigned_equipment = EquipmentAssignment.objects.filter(patient=patient, active=True).values_list('equipment_id', flat=True)
     available_equipment = Equipment.objects.filter(status='AV')
     
     if request.method == 'POST':
-        equipment_id = request.POST.get('equipment')
-        if equipment_id:
-            equipment = get_object_or_404(Equipment, id=equipment_id)
+        form = EquipmentAssignmentForm(request.POST)
+        if form.is_valid():
+            equipment = form.cleaned_data['equipment']
             
             # Check if equipment is already assigned
-            if not EquipmentAssignment.objects.filter(patient=patient, equipment=equipment, active=True).exists():
-                # Create new assignment
-                EquipmentAssignment.objects.create(
-                    patient=patient,
-                    equipment=equipment,
-                    active=True
-                )
-                
-                # Update equipment status
-                equipment.status = 'NA'  # Not Available
-                equipment.save()
-                
-                messages.success(request, f'Equipment {equipment.name} has been assigned to {patient.name}.')
-            else:
-                messages.warning(request, f'Equipment {equipment.name} is already assigned to {patient.name}.')
+            if equipment.id in assigned_equipment:
+                messages.warning(request, f'Equipment {equipment.name} is already assigned to this patient.')
+                return redirect('hospital:patient_detail', pk=patient_id)
             
-            return redirect('hospital:assign_equipment', patient_id=patient.id)
+            # Create new assignment
+            EquipmentAssignment.objects.create(
+                patient=patient,
+                equipment=equipment,
+                assigned_by=request.user,
+                active=True
+            )
+            
+            # Update equipment status
+            equipment.status = 'AS'
+            equipment.save()
+            
+            messages.success(request, f'Equipment {equipment.name} has been assigned to {patient.name}.')
+            return redirect('hospital:patient_detail', pk=patient_id)
+    else:
+        form = EquipmentAssignmentForm()
     
     return render(request, 'hospital/assign_equipment.html', {
+        'form': form,
         'patient': patient,
-        'available_equipment': available_equipment,
-        'assigned_equipment': assigned_equipment
+        'assigned_equipment': EquipmentAssignment.objects.filter(patient=patient, active=True),
+        'available_equipment': available_equipment
     })
 
-@login_required
 def patient_detail(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
-    available_doctors = Doctor.objects.filter(is_available=True)
+    available_doctors = Doctor.objects.filter(is_available=True).order_by('user__first_name', 'user__last_name')
     return render(request, 'hospital/patient_detail.html', {
         'patient': patient,
         'available_doctors': available_doctors
     })
 
-@login_required
 def unassign_equipment(request, patient_id, equipment_id):
     patient = get_object_or_404(Patient, id=patient_id)
     equipment = get_object_or_404(Equipment, id=equipment_id)
     
     if request.method == 'POST':
-        # Remove equipment from patient's required equipment list
-        if equipment_id in patient.required_equipment:
-            patient.required_equipment.remove(equipment_id)
-            patient.save()
+        # Find and deactivate the assignment
+        assignment = EquipmentAssignment.objects.filter(
+            patient=patient,
+            equipment=equipment,
+            active=True
+        ).first()
+        
+        if assignment:
+            assignment.active = False
+            assignment.save()
             
-            # Update equipment status to available
+            # Update equipment status
             equipment.status = 'AV'
             equipment.save()
             
             messages.success(request, f'Equipment {equipment.name} has been unassigned from {patient.name}.')
         else:
             messages.warning(request, f'Equipment {equipment.name} was not assigned to {patient.name}.')
+        
+        return redirect('hospital:patient_detail', pk=patient_id)
     
-    return redirect('hospital:assign_equipment', patient_id=patient.id)
+    return render(request, 'hospital/unassign_equipment_confirm.html', {
+        'patient': patient,
+        'equipment': equipment
+    })
 
-@login_required
 def assign_doctor(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
+    available_doctors = Doctor.objects.filter(is_available=True)
     
     if request.method == 'POST':
         doctor_id = request.POST.get('doctor')
         if doctor_id:
             doctor = get_object_or_404(Doctor, id=doctor_id)
             
-            # Check if doctor is available and not at max capacity
-            if doctor.is_available and doctor.current_patients < doctor.max_patients:
-                # Update patient's assigned doctor
-                patient.assigned_doctor = doctor
-                patient.save()
-                
-                # Create assignment record
-                Assignment.objects.create(
-                    patient=patient,
-                    doctor=doctor,
-                    bed=patient.assigned_bed if patient.assigned_bed else None,
-                    active=True
-                )
-                
-                messages.success(request, f'Dr. {doctor.user.get_full_name()} has been assigned to {patient.name}.')
-            else:
-                messages.warning(request, f'Dr. {doctor.user.get_full_name()} is not available or has reached maximum patient capacity.')
+            # Update patient's assigned doctor
+            patient.assigned_doctor = doctor
+            patient.save()
+            
+            # Create assignment record
+            Assignment.objects.create(
+                patient=patient,
+                doctor=doctor,
+                bed=patient.assigned_bed,
+                active=True
+            )
+            
+            messages.success(request, f'Doctor {doctor.user.get_full_name()} has been assigned to {patient.name}.')
+            return redirect('hospital:patient_detail', pk=patient_id)
+        else:
+            messages.error(request, 'Please select a doctor.')
     
-    return redirect('hospital:patient_detail', pk=patient.id)
+    return render(request, 'hospital/assign_doctor.html', {
+        'patient': patient,
+        'available_doctors': available_doctors
+    })
 
-@login_required
 def unassign_doctor(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     
     if request.method == 'POST':
         if patient.assigned_doctor:
             doctor_name = patient.assigned_doctor.user.get_full_name()
+            
+            # Update assignments to inactive
+            Assignment.objects.filter(patient=patient, active=True).update(active=False)
+            
+            # Clear doctor assignment
             patient.assigned_doctor = None
             patient.save()
             
-            # Update any active assignments to inactive
-            Assignment.objects.filter(patient=patient, active=True).update(active=False)
-            
-            messages.success(request, f'Dr. {doctor_name} has been unassigned from {patient.name}.')
+            messages.success(request, f'Doctor {doctor_name} has been unassigned from {patient.name}.')
         else:
-            messages.warning(request, f'No doctor is currently assigned to {patient.name}.')
+            messages.warning(request, f'No doctor was assigned to {patient.name}.')
+        
+        return redirect('hospital:patient_detail', pk=patient_id)
     
-    return redirect('hospital:patient_detail', pk=patient.id)
+    return render(request, 'hospital/unassign_doctor_confirm.html', {
+        'patient': patient
+    })
 
-@login_required
 def dashboard(request):
     # Get counts
     waiting_patients = Patient.objects.filter(status='WAI').count()
-    admitted_patients = Patient.objects.filter(status='ADM').count()
+    admitted_patients = Patient.objects.filter(status='TRE').count()
+    treated_patients = Patient.objects.filter(status='TRE').count()
     discharged_patients = Patient.objects.filter(status='DIS').count()
+    total_patients = Patient.objects.count()
+    
+    # Calculate percentages for progress bars
+    if total_patients > 0:
+        waiting_patients_percent = (waiting_patients / total_patients) * 100
+        admitted_percent = (admitted_patients / total_patients) * 100
+        discharged_percent = (discharged_patients / total_patients) * 100
+    else:
+        waiting_patients_percent = 0
+        admitted_percent = 0
+        discharged_percent = 0
+    
+    # Add resource stats
     available_beds = Bed.objects.filter(is_occupied=False).count()
     total_beds = Bed.objects.count()
     available_doctors = Doctor.objects.filter(is_available=True).count()
     total_doctors = Doctor.objects.count()
     total_equipment = Equipment.objects.count()
-
-    # Calculate percentages
-    bed_usage_percent = ((total_beds - available_beds) / total_beds * 100) if total_beds > 0 else 0
-    doctor_availability_percent = (available_doctors / total_doctors * 100) if total_doctors > 0 else 0
-
-    # Group beds by ward
-    beds_by_ward = {}
-    for bed in Bed.objects.all().order_by('ward_type', 'number'):
-        ward = bed.get_ward_type_display()
-        if ward not in beds_by_ward:
-            beds_by_ward[ward] = []
-        beds_by_ward[ward].append(bed)
-
+    
+    if total_beds > 0:
+        bed_usage_percent = ((total_beds - available_beds) / total_beds) * 100
+    else:
+        bed_usage_percent = 0
+    
+    if total_doctors > 0:
+        doctor_availability_percent = (available_doctors / total_doctors) * 100
+    else:
+        doctor_availability_percent = 0
+    
     context = {
         'waiting_patients': waiting_patients,
         'admitted_patients': admitted_patients,
+        'treated_patients': treated_patients,
         'discharged_patients': discharged_patients,
+        'total_patients': total_patients,
+        'waiting_patients_percent': waiting_patients_percent,
+        'admitted_percent': admitted_percent,
+        'discharged_percent': discharged_percent,
         'available_beds': available_beds,
         'total_beds': total_beds,
         'available_doctors': available_doctors,
@@ -640,6 +674,7 @@ def dashboard(request):
         'total_equipment': total_equipment,
         'bed_usage_percent': bed_usage_percent,
         'doctor_availability_percent': doctor_availability_percent,
-        'beds_by_ward': beds_by_ward,
+        'recent_patients': Patient.objects.all().order_by('-admission_date')[:10]
     }
+    
     return render(request, 'hospital/dashboard.html', context)

@@ -121,11 +121,6 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Login settings
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'hospital:dashboard'
-LOGOUT_REDIRECT_URL = 'login'
-
 # Messages settings
 from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {
